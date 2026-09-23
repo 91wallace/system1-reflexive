@@ -1,0 +1,30 @@
+{
+  "name": "record_failure",
+  "description": "Registra uma tentativa ou abordagem que falhou, criando uma regra de veto definitiva (Negative Constraint) para impedir que o modelo sugira ou repita a mesma solução ineficaz.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "approach": {
+        "type": "string",
+        "description": "Descrição clara da abordagem que foi testada (ex: 'Aumentar timeout no Nginx para 300s')."
+      },
+      "failure_reason": {
+        "type": "string",
+        "description": "Sintoma ou mensagem de erro observada após tentar a solução."
+      },
+      "root_cause": {
+        "type": "string",
+        "description": "Causa raiz identificada (opcional, ex: 'Gargalo é a query do banco, não o proxy')."
+      },
+      "veto_rule": {
+        "type": "string",
+        "description": "Regra explícita de veto para a LLM (opcional)."
+      },
+      "category": {
+        "type": "string",
+        "description": "Categoria da falha (ex: 'CODE_BUGFIX', 'DATABASE_SCHEMA_MIGRATION', etc)."
+      }
+    },
+    "required": ["approach", "failure_reason"]
+  }
+}

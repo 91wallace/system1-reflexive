@@ -1,0 +1,80 @@
+# ==========================================
+# System 1 Reflexive - Strict Git Ignore
+# ==========================================
+
+# 1. Credentials, API Keys, Tokens & Secrets
+.env
+.env.*
+*.env
+*token*
+*secret*
+*credential*
+*credentials.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.pkcs12
+antigravity-oauth-token
+id_rsa*
+*.pub
+
+# 2. Local Session States & Personal Dynamic Memories
+session_working_memory.json
+memory.local.json
+*.local.json
+history.jsonl
+*.log
+logs/
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+
+# 3. Python Bytecode, Caches & Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# 4. Node.js & Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# 5. OS & IDE Metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

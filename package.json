@@ -1,0 +1,23 @@
+{
+  "name": "@main/system1-reflexive",
+  "version": "1.0.0",
+  "description": "Motor de inteligência reflexiva System 1 com Laya RLCD e aprendizado ativo contínuo",
+  "main": "engine.py",
+  "type": "module",
+  "scripts": {
+    "classify": "python3 engine.py classify",
+    "mine:local": "python3 miner.py",
+    "mine:marketplaces": "python3 marketplace_miner.py",
+    "test": "python3 engine.py classify 'iniciar projeto com electron e supabase'"
+  },
+  "keywords": [
+    "system1",
+    "laya",
+    "rlcd",
+    "reflexive-engine",
+    "antigravity",
+    "mcp"
+  ],
+  "author": "Antigravity",
+  "license": "Apache-2.0"
+}

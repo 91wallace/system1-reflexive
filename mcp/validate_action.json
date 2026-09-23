@@ -1,0 +1,14 @@
+{
+  "name": "validate_action",
+  "description": "Verifica em <1ms se uma ação ou comando proposto coincide com abordagens já invalidadas na sessão. Retorna se a ação foi vetada e o risco associado.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "proposed_action": {
+        "type": "string",
+        "description": "Ação, comando ou solução que o agente planeja sugerir ou executar."
+      }
+    },
+    "required": ["proposed_action"]
+  }
+}

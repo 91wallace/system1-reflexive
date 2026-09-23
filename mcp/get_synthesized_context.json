@@ -1,0 +1,23 @@
+{
+  "name": "get_synthesized_context",
+  "description": "Retorna o bloco de contexto de trabalho sintetizado e livre de ruído (estado ativo, variáveis e restrições negativas mandatórias) para injeção imediata no prompt da LLM.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Instrução ou consulta atual (opcional)."
+      },
+      "include_negative_constraints": {
+        "type": "boolean",
+        "description": "Se deve incluir o Graveyard de soluções invalidadas (padrão: true).",
+        "default": true
+      },
+      "include_state": {
+        "type": "boolean",
+        "description": "Se deve incluir o estado e variáveis ativas (padrão: true).",
+        "default": true
+      }
+    }
+  }
+}

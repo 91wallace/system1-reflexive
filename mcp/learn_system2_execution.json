@@ -1,0 +1,22 @@
+{
+  "name": "learn_system2_execution",
+  "description": "Destila o conhecimento de raciocínio complexo executado pelo System 2 (LLM), salvando os pares de instrução e padrão semântico para que o System 1 aprenda e execute mais rápido em iterações futuras.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "description": "O prompt ou objetivo complexo que foi processado pelo System 2."
+      },
+      "system2_output": {
+        "type": "string",
+        "description": "Resumo ou saída gerada pelo System 2."
+      },
+      "task_category": {
+        "type": "string",
+        "description": "Categoria da tarefa destilada."
+      }
+    },
+    "required": ["prompt", "system2_output", "task_category"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "classify",
+  "description": "Classifica reflexivamente em <10ms a intenção, tarefa ou comando do usuário com probabilidades matematicamente calibradas (System 1 Lia Engine). Retorna a categoria tipada, confiança e se requer fallback para System 2.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "Texto, comando ou objetivo a ser classificado pelo System 1."
+      },
+      "temperature": {
+        "type": "number",
+        "description": "Fator de temperatura para calibração de softmax (padrão: 1.15).",
+        "default": 1.15
+      }
+    },
+    "required": ["text"]
+  }
+}

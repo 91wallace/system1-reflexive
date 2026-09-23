@@ -1,0 +1,26 @@
+{
+  "name": "record_feedback",
+  "description": "Registra o feedback de aprendizado após cada função ou ação executada com sucesso pelo agente, refinando continuamente a matriz de probabilidade e as palavras-chave do System 1.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "O texto ou comando executado."
+      },
+      "actual_label": {
+        "type": "string",
+        "description": "A categoria real correspondente (ex: PROJECT_BOOTSTRAP, CODE_BUGFIX, FEATURE_IMPLEMENTATION, DATABASE_SCHEMA_MIGRATION, TEST_AUTOMATION, ARCHITECTURE_DESIGN, TOOL_EXECUTION_COMMAND)."
+      },
+      "success": {
+        "type": "boolean",
+        "description": "Indica se a execução foi bem-sucedida."
+      },
+      "feedback_note": {
+        "type": "string",
+        "description": "Nota contextual opcional sobre a execução."
+      }
+    },
+    "required": ["text", "actual_label", "success"]
+  }
+}
