@@ -85,7 +85,7 @@ LLM agents (System 2) are powerful, but invoking a generative LLM for simple tri
 Run the one-line installer:
 
 ```bash
-git clone https://github.com/your-username/system1-reflexive.git
+git clone https://github.com/91wallace/system1-reflexive.git
 cd system1-reflexive
 ./install.sh
 ```
