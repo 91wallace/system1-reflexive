@@ -152,7 +152,7 @@ class TestSystem1MemoryIntegration(unittest.TestCase):
         self.assertIn("bugfix_payment", session_ids)
 
     def test_09_laya_suggestion_and_learning(self):
-        # 1. Reset telemetry
+        # 1. Reset telemetry & mock uninstalled state for suggestion test
         data = {
             "total_queries": 0,
             "fallback_count": 0,
@@ -160,29 +160,34 @@ class TestSystem1MemoryIntegration(unittest.TestCase):
             "laya_installed_at": None
         }
         self.engine.laya._save_telemetry(data)
+        original_is_installed = self.engine.laya.is_installed
+        self.engine.laya.is_installed = lambda: False
 
-        status = self.engine.get_laya_status()
-        self.assertFalse(status["installed"])
-        self.assertFalse(status["suggestion"]["should_suggest"])
+        try:
+            status = self.engine.get_laya_status()
+            self.assertFalse(status["installed"])
+            self.assertFalse(status["suggestion"]["should_suggest"])
 
-        # 2. Simulate 10 queries requiring system2
-        for i in range(10):
-            self.engine.laya.record_query_metric(required_system2=True)
+            # 2. Simulate 10 queries requiring system2
+            for i in range(10):
+                self.engine.laya.record_query_metric(required_system2=True)
 
-        status_after_10 = self.engine.get_laya_status()
-        self.assertTrue(status_after_10["suggestion"]["should_suggest"])
-        self.assertIn("Laya (ModernBERT)", status_after_10["suggestion"]["message"])
+            status_after_10 = self.engine.get_laya_status()
+            self.assertTrue(status_after_10["suggestion"]["should_suggest"])
+            self.assertIn("Laya (ModernBERT)", status_after_10["suggestion"]["message"])
 
-        # 3. Dismiss suggestion
-        dismiss_res = self.engine.dismiss_laya_suggestion()
-        self.assertEqual(dismiss_res["status"], "suggestion_dismissed")
+            # 3. Dismiss suggestion
+            dismiss_res = self.engine.dismiss_laya_suggestion()
+            self.assertEqual(dismiss_res["status"], "suggestion_dismissed")
 
-        # Verify it won't suggest again even with more fallback queries
-        for _ in range(5):
-            self.engine.laya.record_query_metric(required_system2=True)
-        status_dismissed = self.engine.get_laya_status()
-        self.assertFalse(status_dismissed["suggestion"]["should_suggest"])
-        self.assertEqual(status_dismissed["suggestion"]["reason"], "already_prompted")
+            # Verify it won't suggest again even with more fallback queries
+            for _ in range(5):
+                self.engine.laya.record_query_metric(required_system2=True)
+            status_dismissed = self.engine.get_laya_status()
+            self.assertFalse(status_dismissed["suggestion"]["should_suggest"])
+            self.assertEqual(status_dismissed["suggestion"]["reason"], "already_prompted")
+        finally:
+            self.engine.laya.is_installed = original_is_installed
 
         # 4. Continuous learning from Laya decision
         learn_res = self.engine.learn_laya_decision(

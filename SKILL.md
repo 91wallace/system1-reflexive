@@ -9,6 +9,11 @@ description: >-
 
 Esta skill integra o motor reflexivo do System 1 com a gestão dinâmica de memória de trabalho e catálogo de soluções invalidadas.
 
+## 🛡️ Regras Mandatórias de Integridade (Anti-Corrupção)
+1. **System 1 e Laya NUNCA geram nem editam código:** São motores estritamente de **triagem, validação e telemetria (<10ms)**.
+2. **Inspeção Prévia Obrigatória pela LLM (System 2):** A LLM deve **SEMPRE ler os arquivos de código reais** (`view_file`) antes de criar, editar ou refatorar qualquer código ou estrutura do projeto. Nunca deduza código a partir de resumos.
+3. **Avisos Consultivos:** Lições aprendidas e validações atuam como orientação e prevenção de riscos, nunca como bloqueios arbitrários contra a edição de arquivos legítimos.
+
 ---
 
 ## ⚡ Comandos e Ações Rápidas

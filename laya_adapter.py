@@ -145,9 +145,9 @@ class LayaNeuralAdapter:
 
     def install_laya(self) -> Dict[str, Any]:
         """Executa a instalação local do pacote laya no ambiente."""
-        print("[*] Iniciando instalação do pacote laya (ModernBERT)...")
+        print("[*] Iniciando instalação do pacote laya (ModernBERT)...", file=sys.stderr)
         try:
-            cmd = [sys.executable, "-m", "pip", "install", "laya"]
+            cmd = [sys.executable, "-m", "pip", "install", "laya", "--break-system-packages"]
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             if res.returncode == 0:
                 self._init_local_router()
@@ -161,7 +161,7 @@ class LayaNeuralAdapter:
         except Exception as e:
             return {"status": "error", "success": False, "error": str(e)}
 
-    def predict(self, text: str, questions: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def predict(self, text: str, questions: Optional[Dict[str, Any]] = None, fast_mode: bool = True) -> Dict[str, Any]:
         """
         Executa a predição tipada (RLCD) usando o Laya nativo ou surrogate calibrado.
         """
@@ -169,8 +169,8 @@ class LayaNeuralAdapter:
         q = questions or LAYA_QUESTIONS
         state = {"body": text}
 
-        # 1. Tentar execução local via biblioteca oficial Laya se instalada
-        if self._local_router:
+        # 1. Tentar execução neural local se solicitado e disponível
+        if not fast_mode and self._local_router:
             try:
                 res = self._local_router.predict(state, q)
                 elapsed_ms = (time.perf_counter() - start) * 1000.0

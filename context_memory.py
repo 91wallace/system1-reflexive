@@ -362,9 +362,9 @@ class ContextMemoryEngine:
             doc_kws = docs_tokens[idx]
             bm25_score = compute_bm25_score(query_tokens, doc_kws, avg_doc_len, num_docs, df_map)
             
-            # Match exato de frase ou alta relevância BM25 (>1.8)
             app_norm = normalize_text(fh.get("approach", ""))
-            is_phrase_match = app_norm in action_norm or action_norm in app_norm
+            # Match exato apenas quando a frase da abordagem é suficientemente específica (>= 3 palavras)
+            is_phrase_match = (len(app_norm.split()) >= 3 and app_norm in action_norm)
 
             if is_phrase_match or bm25_score >= 1.5:
                 matches.append({
@@ -383,7 +383,7 @@ class ContextMemoryEngine:
                 "vetoed": True,
                 "risk_score": 1.0,
                 "status": "ACTION_BLOCKED",
-                "message": "Ação bloqueada pelo Sistema de Memória Negativa: esta abordagem já foi testada e falhou.",
+                "message": "Ação bloqueada pelo Sistema de Memória Negativa: esta abordagem técnica já foi testada e falhou.",
                 "matching_vetos": matches,
                 "latency_ms": round(latency, 3)
             }
@@ -549,7 +549,7 @@ class ContextMemoryEngine:
         if include_negative_constraints:
             failed_list = self.state.get("failed_hypotheses", [])
             if failed_list:
-                neg_lines = ["⚠️ AS SEGUINTES ABORDAGENS JÁ FORAM TESTADAS E FALHARAM. É EXPRESSAMENTE PROIBIDO REPETI-LAS:"]
+                neg_lines = ["⚠️ AS SEGUINTES ABORDAGENS JÁ FORAM TESTADAS E FALHARAM. EVITE REPETIR OS MESMOS ERROS:"]
                 
                 # Se há query, prioriza por BM25, caso contrário pega as mais recentes
                 if current_query:
