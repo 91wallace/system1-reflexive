@@ -1,0 +1,14 @@
+{
+  "name": "add_constraint",
+  "description": "Adiciona uma restrição operacional à memória de trabalho da sessão.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "constraint": {
+        "type": "string",
+        "description": "A restrição ou diretriz mandatória a ser respeitada."
+      }
+    },
+    "required": ["constraint"]
+  }
+}

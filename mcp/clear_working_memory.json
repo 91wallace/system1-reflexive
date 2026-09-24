@@ -1,0 +1,8 @@
+{
+  "name": "clear_working_memory",
+  "description": "Limpa a memória de trabalho efêmera da sessão atual (objetivo, variáveis e restrições da sessão).",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

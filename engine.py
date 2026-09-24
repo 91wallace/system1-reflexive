@@ -10,13 +10,11 @@ import time
 import math
 import re
 import unicodedata
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple, Set
 from dataclasses import dataclass, asdict, field
 from laya_adapter import LayaNeuralAdapter
 from context_memory import ContextMemoryEngine
-
-DATA_DIR = os.path.dirname(os.path.abspath(__file__))
-MEMORY_FILE = os.path.join(DATA_DIR, "memory.json")
+from config_manager import get_memory_file, get_session_memory_file, atomic_save_json, normalize_text
 
 
 DEFAULT_TAXONOMY = [
@@ -32,14 +30,39 @@ DEFAULT_TAXONOMY = [
 
 
 class System1ContinuousEngine:
-    def __init__(self, memory_path: str = MEMORY_FILE):
-        self.memory_path = memory_path
+    def __init__(self, memory_path: Optional[str] = None, session_path: Optional[str] = None):
+        self.memory_path = memory_path or get_memory_file()
         self.taxonomy = DEFAULT_TAXONOMY
         self.temperature = 1.15
         self.confidence_threshold = 0.70
         self.memory = self._load_memory()
         self.laya = LayaNeuralAdapter()
-        self.context_memory = ContextMemoryEngine()
+        self.context_memory = ContextMemoryEngine(storage_path=session_path)
+        self._build_index()
+
+    def _build_index(self):
+        """Compila índice invertido em memória para classificação reflexiva O(1) por token."""
+        patterns = self.memory.get("patterns", {})
+        self._term_freq: Dict[str, int] = {}
+        for label, keywords in patterns.items():
+            for kw in keywords:
+                k_norm = normalize_text(kw)
+                self._term_freq[k_norm] = self._term_freq.get(k_norm, 0) + 1
+
+        self._single_word_map: Dict[str, List[Tuple[int, float]]] = {}
+        self._multi_word_patterns: List[Tuple[str, int, float, Set[str]]] = []
+
+        for idx, label in enumerate(self.taxonomy):
+            keywords = patterns.get(label, [])
+            for kw in keywords:
+                kw_norm = normalize_text(kw)
+                if " " in kw_norm:
+                    tokens = set(kw_norm.split())
+                    self._multi_word_patterns.append((kw_norm, idx, 7.0, tokens))
+                else:
+                    freq = self._term_freq.get(kw_norm, 1)
+                    weight = max(1.0, 5.0 - (freq - 1) * 1.5)
+                    self._single_word_map.setdefault(kw_norm, []).append((idx, weight))
 
     def _load_memory(self) -> Dict[str, Any]:
         if os.path.exists(self.memory_path):
@@ -70,13 +93,13 @@ class System1ContinuousEngine:
 
     def _save_memory_data(self, data: Dict[str, Any]):
         try:
-            with open(self.memory_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+            atomic_save_json(self.memory_path, data)
         except Exception as e:
             print(f"Erro ao salvar memória: {e}", file=sys.stderr)
 
     def _save(self):
         self._save_memory_data(self.memory)
+        self._build_index()
 
     def _check_non_latin(self, text: str) -> bool:
         for char in text:
@@ -88,42 +111,28 @@ class System1ContinuousEngine:
     def classify(self, text: str, temperature: Optional[float] = None) -> Dict[str, Any]:
         start = time.perf_counter()
         t = temperature or self.memory.get("temperature", self.temperature)
-        text_lower = text.lower()
+        text_norm = normalize_text(text)
         has_non_latin = self._check_non_latin(text)
 
         logits = [0.0] * len(self.taxonomy)
-        patterns = self.memory.get("patterns", {})
-
-        # Compute term frequency across taxonomies for IDF weighting
-        term_freq: Dict[str, int] = {}
-        for label, keywords in patterns.items():
-            for kw in keywords:
-                k_low = kw.lower()
-                term_freq[k_low] = term_freq.get(k_low, 0) + 1
-
         matched = False
-        words = set(re.findall(r'\b\w+\b', text_lower))
+        words = set(re.findall(r'\b\w+\b', text_norm))
 
-        for idx, label in enumerate(self.taxonomy):
-            keywords = patterns.get(label, [])
-            for kw in keywords:
-                kw_low = kw.lower()
-                # 1. Multi-word exact contiguous phrase match
-                if " " in kw_low and kw_low in text_lower:
-                    logits[idx] += 7.0
-                    matched = True
-                # 2. Multi-word phrase with all words present in query
-                elif " " in kw_low:
-                    kw_tokens = set(kw_low.split())
-                    if len(kw_tokens) > 1 and kw_tokens.issubset(words):
-                        logits[idx] += 6.0
-                        matched = True
-                # 3. Single word match with word boundary
-                elif kw_low in words:
-                    freq = term_freq.get(kw_low, 1)
-                    weight = max(1.0, 5.0 - (freq - 1) * 1.5)
+        # 1. Busca O(1) no índice invertido de termos simples
+        for token in words:
+            if token in self._single_word_map:
+                for idx, weight in self._single_word_map[token]:
                     logits[idx] += weight
                     matched = True
+
+        # 2. Casamento de frases multi-palavras pré-indexadas
+        for kw_norm, idx, weight, tokens in self._multi_word_patterns:
+            if kw_norm in text_norm:
+                logits[idx] += 7.0
+                matched = True
+            elif len(tokens) > 1 and tokens.issubset(words):
+                logits[idx] += 6.0
+                matched = True
 
         if not matched:
             fallback_idx = self.taxonomy.index("FALLBACK_SYSTEM2_REASON")
@@ -184,7 +193,7 @@ class System1ContinuousEngine:
         }
 
     # ==========================================
-    # Integração de Memória de Trabalho e Negativa
+    # Integração de Memória de Trabalho, Playbooks e Segurança
     # ==========================================
     def record_failure(
         self,
@@ -194,7 +203,7 @@ class System1ContinuousEngine:
         veto_rule: str = "",
         category: str = "CODE_BUGFIX"
     ) -> Dict[str, Any]:
-        """Registra uma falha e gera regra de veto mandatória."""
+        """Registra uma falha e gera regra de veto mandatória no Graveyard."""
         return self.context_memory.record_failure(
             approach=approach,
             failure_reason=failure_reason,
@@ -204,19 +213,57 @@ class System1ContinuousEngine:
         )
 
     def validate_action(self, proposed_action: str) -> Dict[str, Any]:
-        """Valida ação contra histórico de falhas da sessão."""
+        """Valida ação contra histórico de falhas e guardrails de segurança."""
         return self.context_memory.validate_action(proposed_action)
+
+    def analyze_action_safety(self, action_text: str) -> Dict[str, Any]:
+        """Analisa reflexivamente se a ação possui risco de destruição de dados ou shell inseguro."""
+        from context_memory import analyze_action_safety
+        return analyze_action_safety(action_text)
+
+    def record_playbook(
+        self,
+        title: str,
+        description: str,
+        solution_steps: List[str],
+        category: str = "FEATURE_IMPLEMENTATION",
+        keywords: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Registra solução canônica confirmada no catálogo de Playbooks (Hall of Fame)."""
+        return self.context_memory.record_playbook(
+            title=title,
+            description=description,
+            solution_steps=solution_steps,
+            category=category,
+            keywords=keywords
+        )
+
+    def recommend_playbooks(self, query: str, limit: int = 3) -> List[Dict[str, Any]]:
+        """Recomenda Playbooks canônicos usando pontuação BM25."""
+        return self.context_memory.recommend_playbooks(query=query, limit=limit)
+
+    def switch_session(self, session_id: str) -> Dict[str, Any]:
+        """Alterna a memória de trabalho para outro branch ou identificador de sessão."""
+        return self.context_memory.switch_session(session_id)
+
+    def list_sessions(self) -> List[Dict[str, Any]]:
+        """Lista todas as sessões registradas no projeto."""
+        return self.context_memory.list_sessions()
 
     def get_synthesized_context(
         self,
         query: str = "",
+        max_tokens: int = 800,
         include_negative_constraints: bool = True,
+        include_playbooks: bool = True,
         include_state: bool = True
     ) -> str:
-        """Retorna bloco de contexto otimizado para injeção no prompt."""
+        """Retorna bloco de contexto otimizado pelo Token Budget Optimizer."""
         return self.context_memory.get_synthesized_context(
             current_query=query,
+            max_tokens=max_tokens,
             include_negative_constraints=include_negative_constraints,
+            include_playbooks=include_playbooks,
             include_state=include_state
         )
 
@@ -278,12 +325,19 @@ class System1ContinuousEngine:
             "total_patterns_for_label": len(label_patterns)
         }
 
-    def learn_system2_execution(self, prompt: str, system2_output: str, task_category: str) -> Dict[str, Any]:
+    def learn_system2_execution(
+        self,
+        prompt: str,
+        system2_output: str = "",
+        task_category: str = "FEATURE_IMPLEMENTATION",
+        execution_summary: str = ""
+    ) -> Dict[str, Any]:
         """
         Destilação do System 2:
         Sempre que o LLM generativo conclui uma tarefa complexa, o System 1 absorve
         a correlação e os termos-chave para que na próxima vez possa resolver ou pré-rotear como System 1.
         """
+        summary_text = system2_output or execution_summary or ""
         if task_category not in self.taxonomy:
             task_category = "FEATURE_IMPLEMENTATION"
 
@@ -291,7 +345,7 @@ class System1ContinuousEngine:
             "timestamp": time.time(),
             "prompt": prompt,
             "task_category": task_category,
-            "summary": system2_output[:300]
+            "summary": summary_text[:300]
         }
 
         self.memory.setdefault("system2_distillations", []).append(distillation_entry)
@@ -314,7 +368,7 @@ class System1ContinuousEngine:
         }
 
 
-if __name__ == "__main__":
+def main():
     engine = System1ContinuousEngine()
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
@@ -329,7 +383,8 @@ if __name__ == "__main__":
             act = " ".join(sys.argv[2:])
             print(json.dumps(engine.validate_action(act), indent=2))
         elif cmd == "context":
-            print(engine.get_synthesized_context())
+            q = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
+            print(engine.get_synthesized_context(query=q))
         elif cmd == "goal" and len(sys.argv) > 2:
             g = " ".join(sys.argv[2:])
             print(json.dumps(engine.set_active_goal(g), indent=2))
@@ -337,9 +392,83 @@ if __name__ == "__main__":
             lbl = sys.argv[2]
             txt = " ".join(sys.argv[3:])
             print(json.dumps(engine.record_feedback(txt, lbl, True), indent=2))
+        elif cmd == "learn" and len(sys.argv) > 4:
+            prompt = sys.argv[2]
+            out = sys.argv[3]
+            cat = sys.argv[4]
+            print(json.dumps(engine.learn_system2_execution(prompt, out, cat), indent=2))
+        elif cmd == "graveyard":
+            failed = engine.context_memory.state.get("failed_hypotheses", [])
+            if not failed:
+                print("Nenhuma hipótese invalidada registrada (Graveyard vazio).")
+            else:
+                print(f"=== SYSTEM 1 GRAVEYARD ({len(failed)} hipóteses invalidadas) ===")
+                for fh in failed:
+                    print(f"[{fh['id']}] Categoria: {fh['category']} | Tentativa: {fh['approach']}")
+                    print(f"    Motivo da Falha: {fh['failure_reason']}")
+                    print(f"    Regra de Veto: {fh['veto_rule']}")
+                    print("-" * 50)
+        elif cmd == "stats":
+            patterns = engine.memory.get("patterns", {})
+            total_patterns = sum(len(v) for v in patterns.values())
+            failed = len(engine.context_memory.state.get("failed_hypotheses", []))
+            distillations = len(engine.memory.get("system2_distillations", []))
+            history = len(engine.memory.get("history_log", []))
+            print("=" * 45)
+            print(" 📊 SYSTEM 1 REFLEXIVE - ESTATÍSTICAS DO MOTOR")
+            print("=" * 45)
+            print(f" • Versão                : {engine.memory.get('version', '1.0.0')}")
+            print(f" • Total de Padrões       : {total_patterns}")
+            for cat, kws in patterns.items():
+                print(f"   - {cat:<26}: {len(kws)} termos")
+            print(f" • Graveyard (Vetos)     : {failed} hipóteses invalidadas")
+            print(f" • Destilações System 2  : {distillations} registros")
+            print(f" • Histórico de Feedback : {history} iterações")
+            print(f" • Objetivo Ativo        : {engine.context_memory.state.get('active_goal') or '[Nenhum]'}")
+            print("=" * 45)
+        elif cmd == "safety" and len(sys.argv) > 2:
+            act = " ".join(sys.argv[2:])
+            print(json.dumps(engine.analyze_action_safety(act), indent=2))
+        elif cmd == "playbook" and len(sys.argv) > 4:
+            t = sys.argv[2]
+            d = sys.argv[3]
+            steps = sys.argv[4].split(";")
+            print(json.dumps(engine.record_playbook(t, d, steps), indent=2))
+        elif cmd == "recommend" and len(sys.argv) > 2:
+            q = " ".join(sys.argv[2:])
+            print(json.dumps(engine.recommend_playbooks(q), indent=2))
+        elif cmd == "playbooks":
+            pbs = engine.context_memory.playbooks.get("playbooks", [])
+            if not pbs:
+                print("Nenhum playbook registrado no Hall of Fame.")
+            else:
+                print(f"=== SYSTEM 1 PLAYBOOKS - HALL OF FAME ({len(pbs)} soluções canônicas) ===")
+                for pb in pbs:
+                    print(f"[{pb['id']}] [{pb['category']}] {pb['title']}")
+                    print(f"    Descrição: {pb['description']}")
+                    print(f"    Passos: {' -> '.join(pb['solution_steps'])}")
+                    print("-" * 50)
+        elif cmd == "sessions":
+            sess = engine.list_sessions()
+            print("=== SESSÕES REGISTRADAS NO PROJETO ===")
+            for s in sess:
+                current_mark = " (ATIVA)" if s["session_id"] == (engine.context_memory.session_id or "default") else ""
+                print(f" • Sessão: {s['session_id']}{current_mark}")
+                print(f"   Objetivo: {s['active_goal'] or '[Vazio]'} | Vetos: {s['failed_count']} | Restrições: {s['constraints_count']}")
+        elif cmd == "switch" and len(sys.argv) > 2:
+            sid = sys.argv[2]
+            print(json.dumps(engine.switch_session(sid), indent=2))
+        elif cmd == "benchmark":
+            from benchmarker import run_benchmark
+            runs = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 100
+            run_benchmark(runs)
         elif cmd == "clear":
             print(json.dumps(engine.clear_working_memory(), indent=2))
         else:
-            print("Uso: engine.py [classify | fail | validate | context | goal | feedback | clear]")
+            print("Uso: system1 [classify | fail | validate | safety | context | goal | playbook | recommend | playbooks | sessions | switch | feedback | learn | graveyard | stats | benchmark | clear]")
     else:
         print(json.dumps(engine.classify("iniciar um novo projeto com scaffolding"), indent=2))
+
+
+if __name__ == "__main__":
+    main()

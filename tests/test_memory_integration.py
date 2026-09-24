@@ -82,6 +82,73 @@ class TestSystem1MemoryIntegration(unittest.TestCase):
         self.assertIn("psycopg2.OperationalError", compressed)
         self.assertLess(len(compressed), 400)
 
+    def test_06_playbooks_recording_and_bm25_recommendation(self):
+        # 1. Registra playbook de sucesso
+        pb_res = self.engine.record_playbook(
+            title="Fix Supabase RLS Recursion",
+            description="Resolver loop infinito de recursão na policy do Supabase",
+            solution_steps=[
+                "Criar função security definer get_auth_user_id()",
+                "Substituir auth.uid() pela chamada direta da função na policy",
+                "Recarregar schema cache do PostgREST"
+            ],
+            category="DATABASE_SCHEMA_MIGRATION",
+            keywords=["supabase", "rls", "policy", "recursion"]
+        )
+        self.assertEqual(pb_res["status"], "playbook_recorded")
+        self.assertGreater(pb_res["id"], 0)
+
+        # 2. Testa recomendação BM25 com query relacionada
+        recs = self.engine.recommend_playbooks("como resolver loop de recursão no supabase rls")
+        self.assertTrue(len(recs) > 0)
+        self.assertEqual(recs[0]["title"], "Fix Supabase RLS Recursion")
+        self.assertIn("get_auth_user_id()", recs[0]["solution_steps"][0])
+
+    def test_07_action_safety_guardrails(self):
+        # Test dangerous bash deletion
+        res_del = self.engine.analyze_action_safety("rm -rf /var/log/app/*")
+        self.assertTrue(res_del["blocked"])
+        self.assertEqual(res_del["risk_level"], "CRITICAL")
+
+        # Test dangerous SQL DROP
+        res_drop = self.engine.analyze_action_safety("DROP TABLE users CASCADE;")
+        self.assertTrue(res_drop["blocked"])
+        self.assertIn("SQL destrutivo", res_drop["reasons"][0])
+
+        # Test safe action
+        res_safe = self.engine.analyze_action_safety("SELECT id, name FROM users WHERE active = true;")
+        self.assertTrue(res_safe["safe"])
+        self.assertFalse(res_safe["blocked"])
+
+        # Test validate_action blocking dangerous command directly
+        val_block = self.engine.validate_action("rm -rf /")
+        self.assertTrue(val_block["vetoed"])
+        self.assertEqual(val_block["status"], "ACTION_BLOCKED_SAFETY")
+
+    def test_08_multi_session_isolation(self):
+        # Session A
+        self.engine.switch_session("feature_auth")
+        self.engine.set_active_goal("Implementar OAuth2 com Google")
+        self.engine.record_failure("Usar cookie sem Secure flag", "Bloqueado pelo Chrome")
+        
+        ctx_a = self.engine.get_synthesized_context()
+        self.assertIn("Implementar OAuth2 com Google", ctx_a)
+        self.assertIn("Usar cookie sem Secure flag", ctx_a)
+
+        # Switch to Session B (deve estar isolada)
+        self.engine.switch_session("bugfix_payment")
+        self.engine.set_active_goal("Corrigir webhook do Stripe")
+        
+        ctx_b = self.engine.get_synthesized_context()
+        self.assertIn("Corrigir webhook do Stripe", ctx_b)
+        self.assertNotIn("Implementar OAuth2 com Google", ctx_b)
+
+        # List sessions
+        sessions = self.engine.list_sessions()
+        session_ids = [s["session_id"] for s in sessions]
+        self.assertIn("feature_auth", session_ids)
+        self.assertIn("bugfix_payment", session_ids)
+
 
 if __name__ == "__main__":
     unittest.main()

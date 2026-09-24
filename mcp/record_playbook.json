@@ -1,0 +1,33 @@
+{
+  "name": "record_playbook",
+  "description": "Registra uma solução canônica bem-sucedida (Playbook / Hall of Fame) para acelerar a resolução de problemas futuros semelhantes na primeira tentativa.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "Título claro da solução ou procedimento testado e aprovado."
+      },
+      "description": {
+        "type": "string",
+        "description": "Resumo do problema resolvido e contexto."
+      },
+      "solution_steps": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Lista ordenada de passos ou comandos que executam a solução."
+      },
+      "category": {
+        "type": "string",
+        "description": "Categoria da tarefa (ex: CODE_BUGFIX, FEATURE_IMPLEMENTATION, DATABASE_SCHEMA_MIGRATION).",
+        "default": "FEATURE_IMPLEMENTATION"
+      },
+      "keywords": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Palavras-chave adicionais para indexação BM25."
+      }
+    },
+    "required": ["title", "description", "solution_steps"]
+  }
+}

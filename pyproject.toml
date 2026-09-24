@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "system1-reflexive"
+version = "1.0.0"
+description = "Sub-millisecond Reflexive System 1 Inference Engine with Active Working Memory, Playbooks, and Negative Constraint Graveyard for AI Agents"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Wallace Souza" }
+]
+keywords = [
+    "ai-agents",
+    "system1",
+    "reflexive-inference",
+    "mcp",
+    "model-context-protocol",
+    "working-memory",
+    "modernbert",
+    "guardrails"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = []
+
+[project.optional-dependencies]
+fast = [
+    "orjson>=3.9.0"
+]
+dev = [
+    "pytest>=7.0.0"
+]
+
+[project.scripts]
+system1 = "engine:main"
+
+[tool.setuptools]
+py-modules = [
+    "engine",
+    "context_memory",
+    "config_manager",
+    "laya_adapter",
+    "miner",
+    "marketplace_miner",
+    "benchmarker"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "data*", "mcp*"]

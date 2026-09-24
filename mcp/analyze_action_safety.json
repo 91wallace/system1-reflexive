@@ -1,0 +1,14 @@
+{
+  "name": "analyze_action_safety",
+  "description": "Analisa reflexivamente se um comando de terminal ou query SQL contém operações destrutivas ou de alto risco.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action_text": {
+        "type": "string",
+        "description": "Comando Bash, script ou consulta SQL a ser inspecionada."
+      }
+    },
+    "required": ["action_text"]
+  }
+}

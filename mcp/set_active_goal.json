@@ -1,0 +1,14 @@
+{
+  "name": "set_active_goal",
+  "description": "Define o objetivo principal ativo da sessão de trabalho na memória de trabalho do System 1.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "goal": {
+        "type": "string",
+        "description": "O objetivo ou meta principal a ser alcançada."
+      }
+    },
+    "required": ["goal"]
+  }
+}

@@ -3,10 +3,10 @@ Marketplace (TikTok Shop & Shopee Open API) Semantic Integrator for System 1.
 """
 import os
 import sys
-import json
 from engine import System1ContinuousEngine
+from config_manager import get_memory_file
 
-MEMORY_PATH = "/root/.gemini/antigravity-cli/system1_global/memory.json"
+MEMORY_PATH = get_memory_file()
 
 MARKETPLACE_PATTERNS = {
     "FEATURE_IMPLEMENTATION": [

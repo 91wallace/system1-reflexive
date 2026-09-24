@@ -1,0 +1,19 @@
+{
+  "name": "recommend_playbooks",
+  "description": "Recomenda playbooks canônicos já testados e comprovados neste projeto usando pontuação BM25.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Instrução, erro ou objetivo atual para buscar playbooks correspondentes."
+      },
+      "limit": {
+        "type": "number",
+        "description": "Número máximo de recomendações (padrão: 3).",
+        "default": 3
+      }
+    },
+    "required": ["query"]
+  }
+}

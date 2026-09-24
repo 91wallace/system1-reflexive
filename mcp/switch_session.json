@@ -1,0 +1,14 @@
+{
+  "name": "switch_session",
+  "description": "Alterna a memória de trabalho para outra branch do Git ou identificador de sessão isolada.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "session_id": {
+        "type": "string",
+        "description": "Identificador da sessão ou nome da branch (ex: feature_checkout, bugfix_login)."
+      }
+    },
+    "required": ["session_id"]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "list_sessions",
+  "description": "Lista todas as sessões isoladas registradas no projeto com contagem de vetos e objetivos.",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

@@ -78,3 +78,10 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# System 1 Local Isolated Data & Personal Sessions
+.system1/
+session_working_memory.json
+memory.local.json
+user_profile.json
+*.local.json

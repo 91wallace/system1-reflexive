@@ -5,11 +5,10 @@ import os
 import sys
 import json
 import re
-from pathlib import Path
-from engine import System1ContinuousEngine
+from config_manager import get_memory_file, find_project_root
 
-PROJECTS_DIR = "/root/projects"
-MEMORY_PATH = "/root/.gemini/antigravity-cli/system1_global/memory.json"
+PROJECTS_DIR = os.environ.get("PROJECTS_DIR") or os.path.dirname(find_project_root())
+MEMORY_PATH = get_memory_file()
 
 STOPWORDS = {
     "from", "import", "const", "export", "default", "function", "return", "class",
@@ -125,15 +124,25 @@ def mine_repositories():
                     extracted["FEATURE_IMPLEMENTATION"].add(f"componente {comp_name}")
                     extracted["FEATURE_IMPLEMENTATION"].add(f"tela {comp_name}")
 
-    # Mescla com a base calibrada inicial
+    # Mescla com a base existente ou base inicial
     final_data = dict(INITIAL_BASE)
+    if os.path.exists(MEMORY_PATH):
+        try:
+            with open(MEMORY_PATH, 'r', encoding='utf-8') as f:
+                existing_json = json.load(f)
+                if isinstance(existing_json, dict) and "patterns" in existing_json:
+                    final_data = existing_json
+        except Exception:
+            pass
+
+    patterns = final_data.setdefault("patterns", {})
     total_added = 0
     for cat, terms in extracted.items():
-        existing = set(final_data["patterns"][cat])
+        existing = set(patterns.get(cat, []))
         new_terms = [t for t in terms if t and t not in existing]
-        final_data["patterns"][cat].extend(new_terms)
+        patterns.setdefault(cat, []).extend(new_terms)
         total_added += len(new_terms)
-        print(f" [+] {cat}: +{len(new_terms)} termos minerados (Total: {len(final_data['patterns'][cat])})")
+        print(f" [+] {cat}: +{len(new_terms)} termos minerados (Total: {len(patterns[cat])})")
 
     with open(MEMORY_PATH, 'w', encoding='utf-8') as f:
         json.dump(final_data, f, indent=2, ensure_ascii=False)

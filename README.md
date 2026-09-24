@@ -80,9 +80,9 @@ LLM agents (System 2) are powerful, but invoking a generative LLM for simple tri
 
 ## Installation & Setup
 
-### 1. Global Installation (Linux / macOS / WSL)
+### Automatic Interactive Setup (Global vs. Local Project)
 
-Run the one-line installer:
+Após clonar o repositório, execute o script de instalação interativo:
 
 ```bash
 git clone https://github.com/91wallace/system1-reflexive.git
@@ -90,68 +90,63 @@ cd system1-reflexive
 ./install.sh
 ```
 
-Ensure `~/.local/bin` is in your `PATH`:
-```bash
-export PATH="$HOME/.local/bin:$PATH"
+O instalador perguntará:
 ```
+Onde você deseja instalar o System 1?
+  [1] Globalmente no Sistema (CLI global, IDE/MCP global e Skills)
+  [2] Somente neste Projeto (Estrutura .system1/ local, .agents/ e regras locais)
+  [3] Completa (Global + Local neste Projeto) - [RECOMENDADO]
+```
+
+Você também pode passar argumentos para execução silenciosa ou em scripts CI:
+- `./install.sh --global` (ou `-g`)
+- `./install.sh --local` (ou `-l`)
+- `./install.sh --all` (ou `-a`)
 
 ---
 
-## Usage
+## Estrutura Isolada de Dados do Usuário & Projeto (`.system1/`)
 
-### CLI Execution
+Todas as informações específicas do projeto, memória de trabalho e dados do usuário são isoladas automaticamente na pasta `.system1/`:
+- `.system1/memory.json`: Padrões e vocabulários aprendidos para este projeto.
+- `.system1/session_working_memory.json`: Objetivos ativos, restrições e catálogo de hipóteses invalidadas (Graveyard).
+- `.system1/user_profile.json`: Preferências e restrições globais do usuário.
 
-```bash
-# Classify an intent with calibrated confidence & latency metrics
-system1 classify "fix runtime crash and syntax error in server.js"
-
-# Output:
-# {
-#   "predicted_label": "CODE_BUGFIX",
-#   "confidence": 0.9988,
-#   "latency_ms": 0.849,
-#   "requires_system2_fallback": false,
-#   "laya_decision": {
-#     "backbone": "ModernBERT-large",
-#     "safety_risk": { "score": 1, "label": "seguro" }
-#   }
-# }
-```
-
-### Continuous Feedback & Mining
-
-```bash
-# Mine local codebase terms into memory
-python3 miner.py
-
-# Mine marketplace and API patterns (TikTok Shop & Shopee)
-python3 marketplace_miner.py
-
-# Manually register learned pattern
-python3 engine.py feedback FEATURE_IMPLEMENTATION "implementar checkout pix instantaneo"
-```
+A pasta `.system1/` é ignorada pelo `.gitignore`, garantindo que clonar ou atualizar o repositório base nunca misture nem exponha dados sensíveis do projeto.
 
 ---
 
-## Model Context Protocol (MCP) Server Integration
+## Integração MCP (Model Context Protocol)
 
-System 1 provides native MCP schemas located in `./mcp/`. To use with **Antigravity**, **Cursor**, or **Claude Desktop**, add the configuration:
+O System 1 inclui um servidor MCP stdio nativo compatível com **Antigravity**, **Claude Desktop** e **Cursor** em `src/mcp_server.py`.
 
+Configuração em `mcp_config.json`:
 ```json
 {
   "mcpServers": {
     "system1": {
       "command": "python3",
-      "args": ["/path/to/system1-reflexive/engine.py"]
+      "args": ["/path/to/system1-reflexive/src/mcp_server.py"]
     }
   }
 }
 ```
 
-### Available Tools:
-- `classify`: Sub-millisecond intent and task routing.
-- `record_feedback`: Active feedback loop to register successful patterns.
-- `learn_system2_execution`: System 2 to System 1 distillation pipeline.
+### Ferramentas MCP Disponíveis:
+- `classify`: Triagem reflexiva de intenção e comandos (<10ms).
+- `validate_action`: Validação de ações contra o catálogo de erros (Graveyard).
+- `record_failure`: Registro imediato de falhas e veto de repetição de abordagens errôneas.
+- `record_feedback`: Refinamento contínuo dos padrões aprendidos.
+- `get_synthesized_context`: Injeção de contexto JIT sintetizado e de alto SNR.
+- `learn_system2_execution`: Destilação de raciocínio generativo longo do System 2 para System 1.
+
+---
+
+## Disponibilidade de Skills e Regras de Agentes
+
+- **`/mcp`**: Schemas JSON e `instructions.md` para integração com MCP.
+- **`/skills`** e **`.agents/skills`**: `SKILL.md` contendo os runbooks e comandos do System 1.
+- **`/agents` e `.agents`**: Regras obrigatórias de execução reflexiva em `agents/rules/system1_reflexive.md` e `AGENTS.md`.
 
 ---
 
