@@ -216,6 +216,56 @@ class TestMCPAndConfig(unittest.TestCase):
         s_ids = [s["session_id"] for s in list_data["sessions"]]
         self.assertIn("test_mcp_session", s_ids)
 
+    def test_08_mcp_laya_tools(self):
+        server = System1MCPServer()
+
+        # 1. get_laya_status tool call
+        status_res = server.handle_request({
+            "jsonrpc": "2.0",
+            "id": 14,
+            "method": "tools/call",
+            "params": {
+                "name": "get_laya_status",
+                "arguments": {}
+            }
+        })
+        self.assertFalse(status_res["result"]["isError"])
+        status_data = json.loads(status_res["result"]["content"][0]["text"])
+        self.assertIn("installed", status_data)
+
+        # 2. dismiss_laya_suggestion tool call
+        dismiss_res = server.handle_request({
+            "jsonrpc": "2.0",
+            "id": 15,
+            "method": "tools/call",
+            "params": {
+                "name": "dismiss_laya_suggestion",
+                "arguments": {}
+            }
+        })
+        self.assertFalse(dismiss_res["result"]["isError"])
+        dismiss_data = json.loads(dismiss_res["result"]["content"][0]["text"])
+        self.assertEqual(dismiss_data["status"], "suggestion_dismissed")
+
+        # 3. learn_laya_decision tool call
+        learn_res = server.handle_request({
+            "jsonrpc": "2.0",
+            "id": 16,
+            "method": "tools/call",
+            "params": {
+                "name": "learn_laya_decision",
+                "arguments": {
+                    "prompt": "gerar migration alembic para foreign key",
+                    "category": "DATABASE_SCHEMA_MIGRATION",
+                    "confidence": 0.96
+                }
+            }
+        })
+        self.assertFalse(learn_res["result"]["isError"])
+        learn_data = json.loads(learn_res["result"]["content"][0]["text"])
+        self.assertEqual(learn_data["status"], "laya_learned")
+
 
 if __name__ == "__main__":
     unittest.main()
+

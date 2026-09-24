@@ -1,0 +1,8 @@
+{
+  "name": "get_laya_status",
+  "description": "Retorna o status de instalação do Laya Neural Engine (ModernBERT), métricas de uso e se há sugestão de instalação para este projeto.",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

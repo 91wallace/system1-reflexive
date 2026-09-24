@@ -1,0 +1,8 @@
+{
+  "name": "dismiss_laya_suggestion",
+  "description": "Descarta a sugestão de instalação do Laya neste projeto para que o sistema não volte a sugerir.",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

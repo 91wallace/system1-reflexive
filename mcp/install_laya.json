@@ -1,0 +1,8 @@
+{
+  "name": "install_laya",
+  "description": "Instala localmente o pacote neural Laya para habilitar decisões tipadas zero-shot em ModernBERT.",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

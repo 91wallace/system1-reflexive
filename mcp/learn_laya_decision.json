@@ -1,0 +1,23 @@
+{
+  "name": "learn_laya_decision",
+  "description": "Absorve e consolida a decisão neural do Laya nos padrões de memória reflexiva do System 1.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "description": "Prompt ou instrução analisada."
+      },
+      "category": {
+        "type": "string",
+        "description": "Categoria classificada pelo Laya."
+      },
+      "confidence": {
+        "type": "number",
+        "description": "Confiança da predição.",
+        "default": 0.95
+      }
+    },
+    "required": ["prompt", "category"]
+  }
+}

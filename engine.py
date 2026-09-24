@@ -163,6 +163,10 @@ class System1ContinuousEngine:
             laya_requires_system2
         )
 
+        # Rastreia telemetria local e verifica sugestão inteligente de Laya
+        self.laya.record_query_metric(requires_system2)
+        laya_sug = self.laya.check_laya_suggestion()
+
         elapsed_ms = (time.perf_counter() - start) * 1000.0
 
         scores = [
@@ -182,8 +186,10 @@ class System1ContinuousEngine:
                 "backbone": laya_eval.get("routing", {}).get("model", "ModernBERT-large"),
                 "safety_risk": laya_eval.get("answers", {}).get("safety_risk", {}) if not action_validation.get("vetoed") else {"risk_score": 1.0, "blocked_by_negative_memory": True},
                 "deep_reasoning_required": laya_requires_system2,
-                "calibrated_rlcd": True
+                "calibrated_rlcd": True,
+                "installed": laya_eval.get("installed", False)
             },
+            "laya_suggestion": laya_sug if laya_sug.get("should_suggest") else None,
             "meta": {
                 "has_non_latin_script": has_non_latin,
                 "temperature": t,
@@ -367,6 +373,46 @@ class System1ContinuousEngine:
             "learned_patterns": res.get("added_keywords", [])
         }
 
+    def learn_laya_decision(self, prompt: str, category: str, confidence: float = 0.95) -> Dict[str, Any]:
+        """
+        Aprendizado contínuo com Laya:
+        Absorve a predição neural do Laya para refinar os padrões do System 1,
+        permitindo que o System 1 responda reflexivamente da próxima vez em <0.5ms.
+        """
+        if category not in self.taxonomy:
+            category = "FEATURE_IMPLEMENTATION"
+
+        res = self.record_feedback(
+            text=prompt,
+            actual_label=category,
+            success=True,
+            feedback_note=f"Aprendido da inferência neural Laya (confiança: {confidence})"
+        )
+
+        return {
+            "status": "laya_learned",
+            "category": category,
+            "learned_patterns": res.get("added_keywords", [])
+        }
+
+    def get_laya_status(self) -> Dict[str, Any]:
+        """Retorna status de instalação, telemetria de uso e sugestão do Laya."""
+        telemetry = self.laya._load_telemetry()
+        suggestion = self.laya.check_laya_suggestion()
+        return {
+            "installed": self.laya.is_installed(),
+            "telemetry": telemetry,
+            "suggestion": suggestion
+        }
+
+    def install_laya(self) -> Dict[str, Any]:
+        """Instala o pacote laya no ambiente."""
+        return self.laya.install_laya()
+
+    def dismiss_laya_suggestion(self) -> Dict[str, Any]:
+        """Descarta sugestão do Laya para não perguntar mais neste projeto."""
+        return self.laya.dismiss_suggestion()
+
 
 def main():
     engine = System1ContinuousEngine()
@@ -462,10 +508,20 @@ def main():
             from benchmarker import run_benchmark
             runs = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 100
             run_benchmark(runs)
+        elif cmd == "laya-status":
+            print(json.dumps(engine.get_laya_status(), indent=2, ensure_ascii=False))
+        elif cmd == "install-laya":
+            print(json.dumps(engine.install_laya(), indent=2, ensure_ascii=False))
+        elif cmd == "dismiss-laya":
+            print(json.dumps(engine.dismiss_laya_suggestion(), indent=2, ensure_ascii=False))
+        elif cmd == "learn-laya" and len(sys.argv) > 3:
+            p = sys.argv[2]
+            cat = sys.argv[3]
+            print(json.dumps(engine.learn_laya_decision(p, cat), indent=2, ensure_ascii=False))
         elif cmd == "clear":
             print(json.dumps(engine.clear_working_memory(), indent=2))
         else:
-            print("Uso: system1 [classify | fail | validate | safety | context | goal | playbook | recommend | playbooks | sessions | switch | feedback | learn | graveyard | stats | benchmark | clear]")
+            print("Uso: system1 [classify | fail | validate | safety | context | goal | playbook | recommend | playbooks | sessions | switch | feedback | learn | learn-laya | laya-status | install-laya | dismiss-laya | graveyard | stats | benchmark | clear]")
     else:
         print(json.dumps(engine.classify("iniciar um novo projeto com scaffolding"), indent=2))
 

@@ -248,6 +248,53 @@ MCP_TOOLS = [
         }
     },
     {
+        "name": "get_laya_status",
+        "description": "Retorna o status de instalação do Laya Neural Engine (ModernBERT), métricas de uso e se há sugestão de instalação para este projeto.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "name": "install_laya",
+        "description": "Instala localmente o pacote neural Laya para habilitar decisões tipadas zero-shot em ModernBERT.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "name": "dismiss_laya_suggestion",
+        "description": "Descarta a sugestão de instalação do Laya neste projeto para que o sistema não volte a sugerir.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "name": "learn_laya_decision",
+        "description": "Absorve e consolida a decisão neural do Laya nos padrões de memória reflexiva do System 1.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "Prompt ou instrução analisada."
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Categoria classificada pelo Laya."
+                },
+                "confidence": {
+                    "type": "number",
+                    "description": "Confiança da predição.",
+                    "default": 0.95
+                }
+            },
+            "required": ["prompt", "category"]
+        }
+    },
+    {
         "name": "learn_system2_execution",
         "description": "Destila o conhecimento de raciocínio complexo executado pelo System 2 (LLM), salvando os pares de instrução e padrão semântico para que o System 1 aprenda e execute mais rápido em iterações futuras.",
         "inputSchema": {
@@ -542,6 +589,22 @@ class System1MCPServer:
 
             elif name == "clear_working_memory":
                 result_data = self.engine.clear_working_memory()
+
+            elif name == "get_laya_status":
+                result_data = self.engine.get_laya_status()
+
+            elif name == "install_laya":
+                result_data = self.engine.install_laya()
+
+            elif name == "dismiss_laya_suggestion":
+                result_data = self.engine.dismiss_laya_suggestion()
+
+            elif name == "learn_laya_decision":
+                result_data = self.engine.learn_laya_decision(
+                    prompt=args.get("prompt", ""),
+                    category=args.get("category", ""),
+                    confidence=float(args.get("confidence", 0.95))
+                )
 
             else:
                 return {

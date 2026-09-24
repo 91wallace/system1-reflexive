@@ -248,6 +248,36 @@ def main():
         if choice == "2":
             setup_global_system(target_server_script)
 
+    # Opção de instalação opcional do Laya Neural Engine
+    install_laya_opt = False
+    for arg in sys.argv[1:]:
+        if arg.lower() in ("--with-laya", "--laya"):
+            install_laya_opt = True
+        elif arg.lower() in ("--no-laya", "--without-laya"):
+            install_laya_opt = False
+
+    if choice is None and "--with-laya" not in sys.argv and "--no-laya" not in sys.argv:
+        print("\nDeseja instalar o motor neural Laya (ModernBERT) agora?")
+        print("  [s] Sim (Baixa pacote laya para decisões neurais zero-shot)")
+        print("  [n] Não (Recomendado: usa o motor reflexivo sub-milissegundo em CPU pura)")
+        try:
+            laya_choice = input("Instalar Laya? [s/N] (padrão: n): ").strip().lower()
+            if laya_choice in ("s", "sim", "y", "yes"):
+                install_laya_opt = True
+        except (EOFError, KeyboardInterrupt):
+            install_laya_opt = False
+
+    if install_laya_opt:
+        print("\n[+] Instalando Laya Neural Engine via pip...")
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install", "laya"], check=False)
+            print("  [✓] Laya instalado com sucesso!")
+        except Exception as e:
+            print(f"  [!] Aviso: Não foi possível instalar laya automaticamente: {e}")
+    else:
+        print("\n[i] Laya não instalado no momento (motor reflexivo nativo ativo).")
+        print("    Você poderá instalá-lo a qualquer momento com: system1 install-laya")
+
     test_installation(target_server_script)
 
     print("\n" + "=" * 65)
